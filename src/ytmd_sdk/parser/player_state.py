@@ -36,8 +36,8 @@ class PlayerState(object):
         self.queue = [queueItem(item) for item in data.get("queue", {}).get("items", [])]
         self.isGenerating = data.get("isGenerating", False)
         self.isInfinite = data.get("isInfinite", False)
-        self.repeatMode = repeatMode_converter.get(data.get("repeatMode", -1), "Unknown")
-        self.selectedItemIndex = data.get("selectedItemIndex", 0)
+        self.repeatMode = repeatMode_converter.get(data.get("queue", {}).get("repeatMode", -1), "Unknown")
+        self.selectedItemIndex = data.get("queue", {}).get("selectedItemIndex", 0)
 
     def __str__(self) -> str:
         return str({

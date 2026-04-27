@@ -59,6 +59,8 @@ class TestParser(unittest.TestCase):
             "player": {
                 "queue": {
                     "autoplay": True,
+                    "repeatMode": 1,
+                    "selectedItemIndex": 2,
                     "items": [
                         {
                             "thumbnails": [{"url": "url1", "width": 100, "height": 100},
@@ -88,6 +90,9 @@ class TestParser(unittest.TestCase):
         }
         parser = Parser(data)
         self.assertEqual(parser.player_state.auto_play, True)
+        # repeatMode and selectedItemIndex live in player.queue, not player
+        self.assertEqual(parser.player_state.repeatMode, "All")
+        self.assertEqual(parser.player_state.selectedItemIndex, 2)
         self.assertEqual(len(parser.player_state.queue), 2)
         self.assertIsInstance(parser.player_state.queue[0], queueItem)
         self.assertIsInstance(parser.player_state.queue[1], queueItem)
