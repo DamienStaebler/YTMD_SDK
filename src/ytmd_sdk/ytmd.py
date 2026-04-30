@@ -339,3 +339,24 @@ class YTMD:
             os.remove(path)
         except OSError:
             pass
+
+    def fetch_cover_art(self, url: str, timeout: int = 5) -> bytes:
+        """
+        Fetch raw image bytes from a cover-art URL returned by YTMD's state.
+        Uses the SDK's shared HTTP session so connection pooling is reused.
+        Encoding (e.g. base64) is left to the caller.
+
+        Args:
+            url (str): Full URL of the thumbnail/cover-art image.
+            timeout (int): Request timeout in seconds (default 5).
+
+        Returns:
+            bytes: Raw image content.
+
+        Raises:
+            requests.HTTPError: If the server returns a non-2xx status.
+            requests.RequestException: On any network error.
+        """
+        resp = self.session.get(url, timeout=timeout)
+        resp.raise_for_status()
+        return resp.content

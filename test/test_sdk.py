@@ -155,6 +155,27 @@ class TestYTMD(unittest.TestCase):
             # clear_token is idempotent when the file is already gone
             ytmd2.clear_token(path)  # should not raise
 
+    def test_fetch_cover_art(self):
+        fake_image = b'\x89PNG\r\n\x1a\n'  # minimal PNG magic bytes
+
+        with patch.object(Session, "get") as session_mock:
+            ytmd = self._ytmd()
+            session_mock.return_value.status_code = 200
+            session_mock.return_value.content = fake_image
+            session_mock.return_value.raise_for_status.return_value = None
+
+            result = ytmd.fetch_cover_art("https://example.com/art.jpg")
+
+            self.assertEqual(result, fake_image)
+            session_mock.assert_called_once_with("https://example.com/art.jpg", timeout=5)
+
+    def test_fetch_cover_art_raises_on_error(self):
+        with patch.object(Session, "get") as session_mock:
+            ytmd = self._ytmd()
+            session_mock.return_value.raise_for_status.side_effect = Exception("404 Not Found")
+
+            self.assertRaises(Exception, ytmd.fetch_cover_art, "https://example.com/missing.jpg")
+
 
 if __name__ == "__main__":
     unittest.main()
