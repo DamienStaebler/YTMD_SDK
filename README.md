@@ -26,8 +26,9 @@ ytmd = YTMD("my-app-id", "My App Name", "1.0.0")
 # Authenticate — opens an approval popup in YTMD. The user has ~30 seconds to approve.
 token = ytmd.authenticate()
 
-# Save the token so you don't need to re-authenticate on the next run.
-ytmd.save_token("/path/to/token.txt")
+# Persist the token yourself so you don't need to re-authenticate on the next run.
+with open("/path/to/token.txt", "w") as f:
+    f.write(token)
 
 def on_connect():
     print("Connected to YTMD")
@@ -51,14 +52,25 @@ ytmd.connect()
 sleep(60)
 ```
 
-On subsequent runs, load the saved token instead of re-authenticating:
+On subsequent runs, load the saved token and check it is still valid before connecting:
 
 ```python
+import os
+
 ytmd = YTMD("my-app-id", "My App Name", "1.0.0")
-token = ytmd.load_token("/path/to/token.txt")
+
+token_path = "/path/to/token.txt"
+token = None
+if os.path.exists(token_path):
+    token = open(token_path).read().strip() or None
+
+if token:
+    ytmd.update_token(token)
+
 if not token or not ytmd.is_token_valid():
     token = ytmd.authenticate()
-    ytmd.save_token("/path/to/token.txt")
+    with open(token_path, "w") as f:
+        f.write(token)
 ```
 
 ## API Reference
@@ -82,11 +94,13 @@ Constructs the client. All network calls use a shared `requests.Session` for con
 | Method | Returns | Description |
 |--------|---------|-------------|
 | `authenticate()` | `str` | Full auth handshake — requests a code, waits for user approval in YTMD (~30s), returns token |
-| `update_token(token)` | `None` | Register a token obtained externally or loaded from disk |
+| `update_token(token)` | `None` | Register a token on this instance and set the `Authorization` header |
+| `revoke_token()` | `None` | Clear the in-memory token and `Authorization` header; does not touch the filesystem |
 | `is_token_valid()` | `bool` | Returns `False` only on a definitive HTTP 401; treats network errors as valid to avoid unnecessary re-auth |
-| `save_token(path)` | `None` | Write the current token to a file |
-| `load_token(path)` | `str or None` | Read a token from a file and register it; returns `None` if the file is missing or empty |
-| `clear_token(path)` | `None` | Remove the token from memory and delete the file; call this after a 401 to force re-authentication |
+
+Token persistence (reading and writing token files) is the caller's responsibility.
+The SDK provides `update_token()` to register a loaded token and `revoke_token()` to
+clear it; file I/O should be implemented in your application layer.
 
 ### Connection
 
@@ -183,19 +197,35 @@ The last item in `thumbnails` is always the highest-resolution image available.
 
 ## Change Log
 
+### 1.2.1
+
+**Token persistence moved to the application layer**
+
+`save_token(path)`, `load_token(path)`, and `clear_token(path)` have been removed from
+the `YTMD` class. Token file I/O is an application-level concern and does not belong in
+a generic client library.
+
+Callers are responsible for reading and writing the token file. Use `update_token(token)`
+to register a loaded token on the SDK instance, and `revoke_token()` to clear it when a
+token is rejected.
+
+- `revoke_token()` replaces `clear_token(path)` for the in-memory side: it sets
+  `self.token = None` and removes the `Authorization` header from the session. It does
+  not touch the filesystem.
+
+See the Quick Start section for a complete token persistence pattern.
+
 ### 1.2.0
 
-**Token lifecycle management**
+**Token lifecycle management** _(removed in 1.2.1 — see above)_
 
-Four new methods were added to handle token persistence across restarts without requiring
-the user to approve a new connection every time:
+The following methods were added in 1.2.0 and removed in 1.2.1 when token persistence
+was moved to the application layer:
 
-- `save_token(path)` writes the current token to a file on disk.
-- `load_token(path)` reads a previously saved token from disk and registers it on the
-  instance. Returns `None` if the file does not exist or is empty.
-- `clear_token(path)` removes the token from memory and deletes the file from disk.
-  This should be called whenever YTMD rejects a token with HTTP 401, so the next startup
-  triggers a clean re-authentication.
+- `save_token(path)`, `load_token(path)`, `clear_token(path)`
+
+Still present from this release:
+
 - `is_token_valid()` makes a lightweight `GET /state` call to verify the current token
   is accepted by YTMD. It returns `False` only on a definitive HTTP 401; transient network
   failures return `True` so a temporary connection drop does not force unnecessary

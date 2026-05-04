@@ -1,5 +1,4 @@
 from ensurepip import version
-import os
 import requests
 import json
 import socketio
@@ -307,54 +306,16 @@ class YTMD:
         except Exception:
             return True
 
-    def load_token(self, path: str) -> Optional[str]:
+    def revoke_token(self) -> None:
         """
-        Load a previously saved token from *path* and register it on this
-        instance via update_token(). Returns the token string, or None if the
-        file does not exist or is empty.
-
-        Args:
-            path: file path where the token was persisted by save_token()
-        """
-        try:
-            with open(path, 'r') as f:
-                token = f.read().strip()
-            if token:
-                self.update_token(token)
-                return token
-        except FileNotFoundError:
-            pass
-        return None
-
-    def save_token(self, path: str) -> None:
-        """
-        Persist the current token to *path* so it can be reloaded by
-        load_token() after a restart.
-
-        Args:
-            path: destination file path
-        """
-        if not self.token:
-            raise ValueError("No token to save — authenticate first")
-        os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
-        with open(path, 'w') as f:
-            f.write(self.token)
-
-    def clear_token(self, path: str) -> None:
-        """
-        Clear the in-memory token and remove *path* from disk.
-        Use this when a token has been rejected (HTTP 401) to force
+        Clear the in-memory token and remove the Authorization header from the
+        HTTP session. Does not touch the filesystem — token file deletion is the
+        caller's responsibility (see the plugin's auth.clear_token()).
+        Call this when a token has been rejected (HTTP 401) to force
         re-authentication on the next connection attempt.
-
-        Args:
-            path: file path previously written by save_token()
         """
         self.token = None
         self.session.headers.pop("Authorization", None)
-        try:
-            os.remove(path)
-        except OSError:
-            pass
 
     def fetch_cover_art(self, url: str, timeout: int = 5) -> bytes:
         """

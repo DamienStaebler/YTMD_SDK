@@ -1,6 +1,4 @@
 import unittest
-import os
-import tempfile
 from unittest.mock import patch
 from ytmd_sdk import YTMD
 from requests import Session
@@ -134,41 +132,18 @@ class TestYTMD(unittest.TestCase):
             
             # TODO: Do we want to have a timeout test that simulates a hanging request?
             
-    def test_token_persistence(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = os.path.join(tmpdir, "auth_token.txt")
+    def test_revoke_token(self):
+        ytmd = self._authed_ytmd("my-secret-token")
+        self.assertEqual(ytmd.token, "my-secret-token")
+        self.assertIn("Authorization", ytmd.session.headers)
 
-            ytmd = self._ytmd()
+        ytmd.revoke_token()
 
-            # load_token returns None when file doesn't exist
-            self.assertIsNone(ytmd.load_token(path))
-            self.assertIsNone(ytmd.token)
+        self.assertIsNone(ytmd.token)
+        self.assertNotIn("Authorization", ytmd.session.headers)
 
-            # save_token raises when there is no token
-            self.assertRaises(ValueError, ytmd.save_token, path)
-
-            # configure a token, verify it is registered for auth, then persist it
-            ytmd.update_token("my-secret-token")
-            self.assertEqual(ytmd.token, "my-secret-token")
-            self.assertEqual(ytmd.session.headers.get("Authorization"), "my-secret-token")
-            ytmd.save_token(path)
-            self.assertTrue(os.path.exists(path))
-
-            # a fresh instance can load the persisted token and use it immediately
-            ytmd2 = self._ytmd()
-            loaded = ytmd2.load_token(path)
-            self.assertEqual(loaded, "my-secret-token")
-            self.assertEqual(ytmd2.token, "my-secret-token")
-            self.assertEqual(ytmd2.session.headers.get("Authorization"), "my-secret-token")
-
-            # clear_token removes the file and invalidates the in-memory token
-            ytmd2.clear_token(path)
-            self.assertIsNone(ytmd2.token)
-            self.assertNotIn("Authorization", ytmd2.session.headers)
-            self.assertFalse(os.path.exists(path))
-
-            # clear_token is idempotent when the file is already gone
-            ytmd2.clear_token(path)  # should not raise
+        # revoke_token is idempotent — calling it again should not raise
+        ytmd.revoke_token()
 
     def test_fetch_cover_art(self):
         fake_image = b'\x89PNG\r\n\x1a\n'  # minimal PNG magic bytes
