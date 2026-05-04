@@ -185,9 +185,6 @@ The last item in `thumbnails` is always the highest-resolution image available.
 
 ### 1.2.0
 
-This release expands the SDK from a basic connection wrapper to a self-contained client
-capable of managing its own authentication lifecycle and fetching associated media assets.
-
 **Token lifecycle management**
 
 Four new methods were added to handle token persistence across restarts without requiring
@@ -212,6 +209,8 @@ the user to approve a new connection every time:
   intentionally left to the caller so the SDK remains format-agnostic. Raises
   `requests.HTTPError` on non-2xx responses and `requests.RequestException` on network
   failures.
+
+  _Note_: YTMD does provide the asset URI so you can simply use the URI for retrieving cover art, pulling it as a byte array may improve performance in some applications.
 
 **Video and playlist control**
 
