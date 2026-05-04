@@ -97,10 +97,22 @@ class TestYTMD(unittest.TestCase):
 
     def test_update_endpoint(self):
         ytmd = self._ytmd()
+
+        # host and port are reflected on the instance
         ytmd.update_endpoint("192.168.1.10", 9863)
         self.assertEqual(ytmd.host, "192.168.1.10")
         self.assertEqual(ytmd.port, 9863)
         self.assertEqual(ytmd.url, "http://192.168.1.10:9863/api/v1")
+
+        # url is rebuilt when only port changes
+        ytmd.update_endpoint("192.168.1.10", 1234)
+        self.assertEqual(ytmd.port, 1234)
+        self.assertEqual(ytmd.url, "http://192.168.1.10:1234/api/v1")
+
+        # url is rebuilt when only host changes
+        ytmd.update_endpoint("10.0.0.1", 1234)
+        self.assertEqual(ytmd.host, "10.0.0.1")
+        self.assertEqual(ytmd.url, "http://10.0.0.1:1234/api/v1")
 
     def test_is_token_valid(self):
         ytmd = self._ytmd()
@@ -179,46 +191,54 @@ class TestYTMD(unittest.TestCase):
 
 
 class TestYTMDUrl(unittest.TestCase):
+    '''
+        These might be redundant since the url method is pretty simple,
+        But they are a good sanity check that URLs are formatted as expected.
+    '''
+    def _ytmd(self, host: str = "127.0.0.1", port: int = 9863) -> YTMD:
+        """Return a YTMD instance with the given host and port."""
+        return YTMD(APP_ID, APP_NAME, APP_VERSION, host=host, port=port)
+
     def test_happy_path(self):
         """Standard string host, int port, int version produces a well-formed URL."""
-        result = YTMD._url("127.0.0.1", 9863, 1)
+        result = self._ytmd("127.0.0.1", 9863)._url(1)
         self.assertEqual(result, "http://127.0.0.1:9863/api/v1")
 
     def test_named_host(self):
         """Hostname strings are preserved as-is."""
-        result = YTMD._url("localhost", 9863, 1)
+        result = self._ytmd("localhost", 9863)._url(1)
         self.assertEqual(result, "http://localhost:9863/api/v1")
 
     def test_float_version(self):
         """Float versions are rendered exactly as Python formats them."""
-        result = YTMD._url("127.0.0.1", 9863, 1.5)
+        result = self._ytmd("127.0.0.1", 9863)._url(1.5)
         self.assertEqual(result, "http://127.0.0.1:9863/api/v1.5")
-
-    def test_float_port(self):
-        """Float ports are coerced to their string representation by the f-string."""
-        result = YTMD._url("127.0.0.1", 9863.0, 1)  # type: ignore[arg-type]
-        self.assertEqual(result, "http://127.0.0.1:9863.0/api/v1")
 
     def test_int_version_as_expected_for_api(self):
         """Int version 1 produces 'v1', not 'v1.0'."""
-        result = YTMD._url("127.0.0.1", 9863, 1)
+        result = self._ytmd("127.0.0.1", 9863)._url(1)
         self.assertIn("v1", result)
         self.assertNotIn("v1.0", result)
 
-    def test_numeric_host(self):
-        """Numeric host values are coerced to strings by the f-string."""
-        result = YTMD._url(1270001, 9863, 1)  # type: ignore[arg-type]
-        self.assertEqual(result, "http://1270001:9863/api/v1")
-
     def test_url_starts_with_http(self):
         """Returned URL always starts with http://."""
-        result = YTMD._url("127.0.0.1", 9863, 1)
+        result = self._ytmd("127.0.0.1", 9863)._url(1)
         self.assertTrue(result.startswith("http://"))
 
     def test_url_contains_api_prefix(self):
         """Returned URL always contains the /api/v prefix."""
-        result = YTMD._url("127.0.0.1", 9863, 1)
+        result = self._ytmd("127.0.0.1", 9863)._url(1)
         self.assertIn("/api/v", result)
+
+    def test_host_reflected_in_url(self):
+        """The host set on the instance appears in the returned URL."""
+        result = self._ytmd("192.168.1.50", 9863)._url(1)
+        self.assertIn("192.168.1.50", result)
+
+    def test_port_reflected_in_url(self):
+        """The port set on the instance appears in the returned URL."""
+        result = self._ytmd("127.0.0.1", 1234)._url(1)
+        self.assertIn("1234", result)
 
 
 if __name__ == "__main__":

@@ -289,7 +289,9 @@ class YTMD:
             host: hostname or IP address of the YTMD server
             port: port number (default 9863)
         """
-        self.url = self._url(version = 1)
+        self.host = host
+        self.port = port
+        self.url = self._url(version=1)
 
     def is_token_valid(self) -> bool:
         """
