@@ -127,7 +127,7 @@ class YTMD:
         url = self.url + "/command"
         request_data = { "command": command }
         
-        if data is not None:
+        if data:
             request_data["data"] = data
 
         return self.session.post(url, data=json.dumps(request_data))
