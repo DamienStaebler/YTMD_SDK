@@ -25,18 +25,18 @@ def on_error(data):
 
 def on_state_update(data):
     parser = Parser(data)
-    print("Player: " + str(parser.player_state))
-    print("Player State: " + parser.player_state.state)
-    print("Player video progress: " + str(parser.player_state.video_progress))
-    print("Player volume: " + str(parser.player_state.volume))
-    print("Player muted: " + str(parser.player_state.muted))
-    print("Player ad playing: " + str(parser.player_state.adPlaying))
-    print("Player auto play: " + str(parser.player_state.auto_play))
-    print("Player is generating: " + str(parser.player_state.isGenerating))
-    print("Player is infinite: " + str(parser.player_state.isInfinite))
-    print("Player repeat mode: " + parser.player_state.repeatMode)
-    print("Player selected item index: " + str(parser.player_state.selectedItemIndex))
-    print("Player queue: " + str(parser.player_state.queue))
+    print(f"Player: { str(parser.player_state) }")
+    print(f"Player State: { parser.player_state.state }")
+    print(f"Player video progress: { str(parser.player_state.video_progress )}")
+    print(f"Player volume: { str(parser.player_state.volume) }")
+    print(f"Player muted: { str(parser.player_state.muted) }")
+    print(f"Player ad playing: { str(parser.player_state.adPlaying) }")
+    print(f"Player auto play: { str(parser.player_state.auto_play) }")
+    print(f"Player is generating: { str(parser.player_state.isGenerating) }")
+    print(f"Player is infinite: { str(parser.player_state.isInfinite) } ")
+    print(f"Player repeat mode: { parser.player_state.repeatMode }")
+    print(f"Player selected item index: { str(parser.player_state.selectedItemIndex) }")
+    print(f"Player queue: {str(parser.player_state.queue) }")
 
 ytmd.register_event(Events.connect, on_connect)
 ytmd.register_event(Events.disconnect, on_disconnect)
@@ -49,6 +49,7 @@ sleep(60)
 
 ## Change Log
 ```
+- 1.2.0: Video and cover art updates
 - 1.0.0: Initial release
 ```
 
