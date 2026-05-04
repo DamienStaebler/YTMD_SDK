@@ -1,3 +1,4 @@
+from ensurepip import version
 import os
 import requests
 import json
@@ -20,13 +21,28 @@ class YTMD:
         self.port = port
         self.token = token
 
-        self.url = f"http://{self.host}:{self.port}/api/v1"
+        self.url = self._url(version = 1)
 
         self.session = requests.Session()
         self.session.headers.update({"Content-Type": "application/json"})
 
         self.socket = socketio.Client(logger=logging)
         self.registered_events = []
+    
+  
+    def _url(self, version: float) -> str:
+        """
+          Build a base URL string for the YTMD Companion API.
+
+          Args:
+                host (str): Hostname or IP address of the YTMD server.
+                port (int): Port number of the YTMD server.
+                version (float): API version number.
+
+          Returns:
+                str: Formatted URL string, e.g. "http://127.0.0.1:9863/api/v1".
+        """
+        return f"http://{self.host}:{self.port}/api/v{version}"
 
     def register_event(self, event: str, callback: Callable) -> None:
         """Register an event to be triggered when the event is emitted by YTMD
@@ -127,7 +143,7 @@ class YTMD:
         url = self.url + "/command"
         request_data = { "command": command }
         
-        if data:
+        if data is not None:
             request_data["data"] = data
 
         return self.session.post(url, data=json.dumps(request_data))
@@ -273,9 +289,7 @@ class YTMD:
             host: hostname or IP address of the YTMD server
             port: port number (default 9863)
         """
-        self.host = host
-        self.port = port
-        self.url = f"http://{self.host}:{self.port}/api/v1"
+        self.url = self._url(version = 1)
 
     def is_token_valid(self) -> bool:
         """

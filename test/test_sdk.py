@@ -69,7 +69,7 @@ class TestYTMD(unittest.TestCase):
                 response = getattr(ytmd, method)(1)
                 self.assertEqual(response.status_code, 200)
 
-        # Verify zero-valued arguments are sent (not silently dropped).
+        # Verify zero-valued arguments are sent (not silently dropped).          
         with patch.object(Session, "post") as session_mock:
             ytmd = self._authed_ytmd()
             session_mock.return_value.status_code = 200
@@ -175,6 +175,50 @@ class TestYTMD(unittest.TestCase):
             session_mock.return_value.raise_for_status.side_effect = Exception("404 Not Found")
 
             self.assertRaises(Exception, ytmd.fetch_cover_art, "https://example.com/missing.jpg")
+
+
+
+class TestYTMDUrl(unittest.TestCase):
+    def test_happy_path(self):
+        """Standard string host, int port, int version produces a well-formed URL."""
+        result = YTMD._url("127.0.0.1", 9863, 1)
+        self.assertEqual(result, "http://127.0.0.1:9863/api/v1")
+
+    def test_named_host(self):
+        """Hostname strings are preserved as-is."""
+        result = YTMD._url("localhost", 9863, 1)
+        self.assertEqual(result, "http://localhost:9863/api/v1")
+
+    def test_float_version(self):
+        """Float versions are rendered exactly as Python formats them."""
+        result = YTMD._url("127.0.0.1", 9863, 1.5)
+        self.assertEqual(result, "http://127.0.0.1:9863/api/v1.5")
+
+    def test_float_port(self):
+        """Float ports are coerced to their string representation by the f-string."""
+        result = YTMD._url("127.0.0.1", 9863.0, 1)  # type: ignore[arg-type]
+        self.assertEqual(result, "http://127.0.0.1:9863.0/api/v1")
+
+    def test_int_version_as_expected_for_api(self):
+        """Int version 1 produces 'v1', not 'v1.0'."""
+        result = YTMD._url("127.0.0.1", 9863, 1)
+        self.assertIn("v1", result)
+        self.assertNotIn("v1.0", result)
+
+    def test_numeric_host(self):
+        """Numeric host values are coerced to strings by the f-string."""
+        result = YTMD._url(1270001, 9863, 1)  # type: ignore[arg-type]
+        self.assertEqual(result, "http://1270001:9863/api/v1")
+
+    def test_url_starts_with_http(self):
+        """Returned URL always starts with http://."""
+        result = YTMD._url("127.0.0.1", 9863, 1)
+        self.assertTrue(result.startswith("http://"))
+
+    def test_url_contains_api_prefix(self):
+        """Returned URL always contains the /api/v prefix."""
+        result = YTMD._url("127.0.0.1", 9863, 1)
+        self.assertIn("/api/v", result)
 
 
 if __name__ == "__main__":
