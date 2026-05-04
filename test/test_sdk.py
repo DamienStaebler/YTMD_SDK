@@ -116,21 +116,24 @@ class TestYTMD(unittest.TestCase):
 
     def test_is_token_valid(self):
         ytmd = self._ytmd()
+        timeout = 5 #seconds
         # No token → always invalid
-        self.assertFalse(ytmd.is_token_valid())
+        self.assertFalse(ytmd.is_token_valid(timeout))
 
         with patch.object(Session, "get") as session_mock:
             ytmd.update_token("test-token")
             session_mock.return_value.status_code = 200
-            self.assertTrue(ytmd.is_token_valid())
+            self.assertTrue(ytmd.is_token_valid(timeout))
 
             session_mock.return_value.status_code = 401
-            self.assertFalse(ytmd.is_token_valid())
+            self.assertFalse(ytmd.is_token_valid(timeout))
 
             # Network errors should not trigger re-auth
             session_mock.side_effect = Exception("connection refused")
-            self.assertTrue(ytmd.is_token_valid())
-
+            self.assertTrue(ytmd.is_token_valid(timeout))
+            
+            # TODO: Do we want to have a timeout test that simulates a hanging request?
+            
     def test_token_persistence(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             path = os.path.join(tmpdir, "auth_token.txt")

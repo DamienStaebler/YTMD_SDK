@@ -293,7 +293,7 @@ class YTMD:
         self.port = port
         self.url = self._url(version=1)
 
-    def is_token_valid(self) -> bool:
+    def is_token_valid(self, timeout: int = 5) -> bool:
         """
         Check whether the current token is accepted by YTMD.
         Returns False only on a definitive HTTP 401; network errors are treated
@@ -302,7 +302,7 @@ class YTMD:
         if not self.token:
             return False
         try:
-            resp = self.session.get(self.url + "/state", timeout=5)
+            resp = self.session.get(self.url + "/state", timeout = timeout)
             return resp.status_code != 401
         except Exception:
             return True
