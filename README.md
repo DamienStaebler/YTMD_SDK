@@ -5,7 +5,7 @@ via its Companion Server API.
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.8+
 - YTMD v2.0.0 or later (Companion Server must be enabled in YTMD settings)
 
 ## Installation
