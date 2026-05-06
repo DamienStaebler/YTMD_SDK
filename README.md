@@ -79,7 +79,7 @@ with open(TOKEN_PATH, "w") as f:
 
 ## API Reference
 
-### YTMD(app_id, app_name, app_version, host="127.0.0.1", port=9863, token=None, logging=False)
+`YTMD(app_id, app_name, app_version, host="127.0.0.1", port=9863, token=None, logging=False)`
 
 Constructs the client. All network calls use a shared `requests.Session` for connection pooling.
 
