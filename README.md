@@ -16,19 +16,33 @@ pip install ytmd-sdk
 
 ## Quick Start
 
+Your application is responsible for persisting and loading the token. Pass it to the SDK
+via `update_token()`.
+
 ```python
+import os
 from ytmd_sdk import Events, YTMD, Parser
 from time import sleep
 
-# Construct the client with your application's identity.
+TOKEN_PATH = "/path/to/token.txt"
+
+# --- Your application loads the token ---
+token = None
+if os.path.exists(TOKEN_PATH):
+    token = open(TOKEN_PATH).read().strip() or None
+
+# --- Pass it to the SDK ---
 ytmd = YTMD("my-app-id", "My App Name", "1.0.0")
 
-# Authenticate — opens an approval popup in YTMD. The user has ~30 seconds to approve.
-token = ytmd.authenticate()
+if token:
+    ytmd.update_token(token)
 
-# Persist the token yourself so you don't need to re-authenticate on the next run.
-with open("/path/to/token.txt", "w") as f:
-    f.write(token)
+if not token or not ytmd.is_token_valid():
+    # Opens an approval popup in YTMD. The user has ~30 seconds to approve.
+    token = ytmd.authenticate()
+    # --- Your application persists the new token ---
+    with open(TOKEN_PATH, "w") as f:
+        f.write(token)
 
 def on_connect():
     print("Connected to YTMD")
@@ -52,25 +66,15 @@ ytmd.connect()
 sleep(60)
 ```
 
-On subsequent runs, load the saved token and check it is still valid before connecting:
+If YTMD rejects the token (e.g. after a server restart), call `revoke_token()` to clear
+it in-memory, then handle the file and re-authenticate in your application:
 
 ```python
-import os
-
-ytmd = YTMD("my-app-id", "My App Name", "1.0.0")
-
-token_path = "/path/to/token.txt"
-token = None
-if os.path.exists(token_path):
-    token = open(token_path).read().strip() or None
-
-if token:
-    ytmd.update_token(token)
-
-if not token or not ytmd.is_token_valid():
-    token = ytmd.authenticate()
-    with open(token_path, "w") as f:
-        f.write(token)
+ytmd.revoke_token()
+os.remove(TOKEN_PATH)          # your application cleans up the stale file
+token = ytmd.authenticate()
+with open(TOKEN_PATH, "w") as f:
+    f.write(token)
 ```
 
 ## API Reference
