@@ -4,7 +4,7 @@ import time
 ytmd = YTMD("touchportalytmd", "TouchPortalYTMD", "1.0.0")
 
 key = ytmd.authenticate()
-print("Key: " + key)
+print(f"Key: {key}")
 # ytmd.update_token("token")
 
 def on_connect():
@@ -18,18 +18,18 @@ def on_error(data):
 
 def on_state_update(data):
     parser = Parser(data)
-    print("Player: " + str(parser.player_state))
-    print("Player State: " + parser.player_state.state)
-    print("Player video progress: " + str(parser.player_state.video_progress))
-    print("Player volume: " + str(parser.player_state.volume))
-    print("Player muted: " + str(parser.player_state.muted))
-    print("Player ad playing: " + str(parser.player_state.adPlaying))
-    print("Player auto play: " + str(parser.player_state.auto_play))
-    print("Player is generating: " + str(parser.player_state.isGenerating))
-    print("Player is infinite: " + str(parser.player_state.isInfinite))
-    print("Player repeat mode: " + parser.player_state.repeatMode)
-    print("Player selected item index: " + str(parser.player_state.selectedItemIndex))
-    print("Player queue: " + str(parser.player_state.queue))
+    print(f"Player: {parser.player_state}")
+    print(f"Player State: {parser.player_state.state}")
+    print(f"Player video progress: {parser.player_state.video_progress}")
+    print(f"Player volume: {parser.player_state.volume}")
+    print(f"Player muted: {parser.player_state.muted}")
+    print(f"Player ad playing: {parser.player_state.adPlaying}")
+    print(f"Player auto play: {parser.player_state.auto_play}")
+    print(f"Player is generating: {parser.player_state.isGenerating}")
+    print(f"Player is infinite: {parser.player_state.isInfinite}")
+    print(f"Player repeat mode: {parser.player_state.repeatMode}")
+    print(f"Player selected item index: {parser.player_state.selectedItemIndex}")
+    print(f"Player queue: {parser.player_state.queue}")
 
 ytmd.register_event(Events.connect, on_connect)
 ytmd.register_event(Events.disconnect, on_disconnect)

@@ -1,7 +1,8 @@
+from ensurepip import version
 import requests
 import json
 import socketio
-from typing import Callable
+from typing import Callable, Optional
 
 class YTMD:
     namespace = "/api/v1/realtime"
@@ -11,7 +12,7 @@ class YTMD:
                 app_version: str,
                 host: str = "127.0.0.1",
                 port: int = 9863,
-                token: str = None, logging=False):
+                token: Optional[str] = None, logging=False):
         self.id = app_id
         self.name = app_name
         self.version = app_version
@@ -19,13 +20,28 @@ class YTMD:
         self.port = port
         self.token = token
 
-        self.url = f"http://{self.host}:{self.port}/api/v1"
+        self.url = self._url(version = 1)
 
         self.session = requests.Session()
         self.session.headers.update({"Content-Type": "application/json"})
 
         self.socket = socketio.Client(logger=logging)
         self.registered_events = []
+    
+  
+    def _url(self, version: float) -> str:
+        """
+          Build a base URL string for the YTMD Companion API.
+
+          Args:
+                host (str): Hostname or IP address of the YTMD server.
+                port (int): Port number of the YTMD server.
+                version (float): API version number.
+
+          Returns:
+                str: Formatted URL string, e.g. "http://127.0.0.1:9863/api/v1".
+        """
+        return f"http://{self.host}:{self.port}/api/v{version}"
 
     def register_event(self, event: str, callback: Callable) -> None:
         """Register an event to be triggered when the event is emitted by YTMD
@@ -53,7 +69,7 @@ class YTMD:
         
         try:
             self.socket.connect(
-                f"ws://{self.host}:9863",
+                f"ws://{self.host}:{self.port}",
                 auth={'token': self.token}, transports=["websocket"],
                 namespaces=[self.namespace]
             )
@@ -99,18 +115,19 @@ class YTMD:
         }
         return self.session.post(url, data=json.dumps(data))
     
-    def request_token(self, code: str) -> requests.Response:
+    def request_token(self, code: str, timeout: int = 35) -> requests.Response:
         """Internal method to request token from YTMD application
 
         Args:
             code (str): code that was obtained from request_code()
+            timeout (int): seconds to wait for user approval (default 35)
         """
         url = self.url + "/auth/request"
         data = {
             "appId": self.id,
             "code": code
         }
-        return self.session.post(url, data=json.dumps(data))
+        return self.session.post(url, data=json.dumps(data), timeout=timeout)
 
     def _check_token(self) -> None:
         """Internal method to check if token is present in the object. If not, raise an exception.
@@ -118,14 +135,14 @@ class YTMD:
         if not self.token or not self.session.headers.get("Authorization"):
             raise Exception("Token is required to communicate with YTMD application. Please authenticate first.")
     
-    def _command(self, command: str, data: int = None) -> requests.Response:
+    def _command(self, command: str, data: Optional[int] = None) -> requests.Response:
         """Internal method to send commands to the player"""
         self._check_token()
 
         url = self.url + "/command"
         request_data = { "command": command }
         
-        if data:
+        if data is not None:
             request_data["data"] = data
 
         return self.session.post(url, data=json.dumps(request_data))
@@ -251,3 +268,72 @@ class YTMD:
         Toggle the dislike status of the current track
         """
         return self._command("toggleDislike")
+
+    def change_video(self, video_id: Optional[str] = None, playlist_id: Optional[str] = None) -> requests.Response:
+        """
+        Play a specific video or playlist.
+
+        Args:
+            video_id: YouTube video ID to play, or None
+            playlist_id: YouTube playlist ID to play, or None
+        """
+        return self._command("changeVideo", {"videoId": video_id, "playlistId": playlist_id})
+
+    def update_endpoint(self, host: str, port: int = 9863) -> None:
+        """
+        Update the target YTMD host and port. Call this when the server address
+        is not known at construction time (e.g. read from user settings).
+
+        Args:
+            host: hostname or IP address of the YTMD server
+            port: port number (default 9863)
+        """
+        self.host = host
+        self.port = port
+        self.url = self._url(version=1)
+
+    def is_token_valid(self, timeout: int = 5) -> bool:
+        """
+        Check whether the current token is accepted by YTMD.
+        Returns False only on a definitive HTTP 401; network errors are treated
+        as still-valid so transient failures don't trigger unnecessary re-auth.
+        """
+        if not self.token:
+            return False
+        try:
+            resp = self.session.get(self.url + "/state", timeout = timeout)
+            return resp.status_code != 401
+        except Exception:
+            return True
+
+    def revoke_token(self) -> None:
+        """
+        Clear the in-memory token and remove the Authorization header from the
+        HTTP session. Does not touch the filesystem — token file deletion is the
+        caller's responsibility (see the plugin's auth.clear_token()).
+        Call this when a token has been rejected (HTTP 401) to force
+        re-authentication on the next connection attempt.
+        """
+        self.token = None
+        self.session.headers.pop("Authorization", None)
+
+    def fetch_cover_art(self, url: str, timeout: int = 5) -> bytes:
+        """
+        Fetch raw image bytes from a cover-art URL returned by YTMD's state.
+        Uses the SDK's shared HTTP session so connection pooling is reused.
+        Encoding (e.g. base64) is left to the caller.
+
+        Args:
+            url (str): Full URL of the thumbnail/cover-art image.
+            timeout (int): Request timeout in seconds (default 5).
+
+        Returns:
+            bytes: Raw image content.
+
+        Raises:
+            requests.HTTPError: If the server returns a non-2xx status.
+            requests.RequestException: On any network error.
+        """
+        resp = self.session.get(url, timeout=timeout)
+        resp.raise_for_status()
+        return resp.content
